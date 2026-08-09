@@ -1,0 +1,112 @@
+/* CPP to APK Builder — dark theme, nuansa index.html lama (W2A Studio). */
+
+:root {
+  --bg: #070b16;
+  --card: rgba(255, 255, 255, .045);
+  --line: rgba(255, 255, 255, .09);
+  --txt: #e8eefc;
+  --mut: #93a0bd;
+  --cy: #22d3ee;
+  --vi: #8b5cf6;
+  --ok: #34d399;
+  --err: #fb7185;
+  --grad: linear-gradient(135deg, #22d3ee, #8b5cf6);
+  --r: 16px;
+}
+
+html, body, .gradio-container {
+  background: var(--bg) !important;
+  color: var(--txt) !important;
+}
+
+body {
+  min-height: 100vh;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Latar gradasi halus + grid */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(900px 500px at 15% -5%, rgba(34, 211, 238, .16), transparent 60%),
+    radial-gradient(800px 500px at 90% 0%, rgba(139, 92, 246, .16), transparent 55%),
+    var(--bg);
+}
+
+/* Heading */
+h1, h2, h3, .gradio-markdown h1, .gradio-markdown h2, .gradio-markdown h3 {
+  color: var(--txt) !important;
+  letter-spacing: -.4px;
+}
+
+.gradio-markdown p, .gradio-markdown li {
+  color: var(--mut) !important;
+}
+
+/* Kartu komponen Gradio */
+.gradio-container .prose, .block, .form, .panel {
+  background: var(--card) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--r) !important;
+}
+
+/* File / drag-drop zone */
+#cpp_input {
+  border: 2px dashed rgba(255, 255, 255, .18) !important;
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, .02) !important;
+  transition: .25s;
+}
+#cpp_input:hover, #cpp_input:focus-within {
+  border-color: rgba(34, 211, 238, .5) !important;
+  background: rgba(34, 211, 238, .04) !important;
+}
+
+/* Tombol build gradient besar */
+#build_btn {
+  background: var(--grad) !important;
+  background-size: 150% 150% !important;
+  border: none !important;
+  border-radius: 13px !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  padding: 16px !important;
+  box-shadow: 0 10px 30px rgba(139, 92, 246, .35) !important;
+  transition: .25s !important;
+}
+#build_btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 38px rgba(139, 92, 246, .5) !important;
+}
+#build_btn:disabled {
+  opacity: .4 !important;
+  cursor: not-allowed !important;
+}
+
+/* Console log */
+#console {
+  background: #060910 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 14px !important;
+  color: var(--txt) !important;
+  font: 12px/1.85 ui-monospace, Consolas, monospace !important;
+}
+#console textarea {
+  background: transparent !important;
+  color: var(--txt) !important;
+}
+
+/* Label & teks abu */
+.gradio-container label, .gradio-container .label-wrap span {
+  color: var(--mut) !important;
+}
+
+/* Scrollbar tipis */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .15); border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }

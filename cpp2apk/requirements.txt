@@ -1,0 +1,12 @@
+gradio==4.44.1
+
+# --- Pins ketat agar kompatibel dengan gradio 4.44.1 ---
+# gradio 4.44.1 (Sep 2024) mendeklarasikan rentang longgar (fastapi<1.0,
+# pydantic>=2.0, huggingface_hub>=0.19.3) sehingga pip default-nya mengambil
+# versi TERBARU yang TIDAK kompatibel dan membuat import/serve gradio gagal.
+# Versi di bawah sudah diverifikasi jalan dengan gradio 4.44.1.
+fastapi==0.112.4
+pydantic==2.8.2
+# gradio 4.x butuh huggingface_hub yang masih punya HfFolder; versi >=1.0
+# menghapusnya dan merusak import gradio.
+huggingface_hub>=0.19.3,<1.0
