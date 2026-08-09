@@ -347,6 +347,97 @@ h1 .g {
   background: rgba(255, 255, 255, 0.12);
 }
 
+/* Tabs */
+.tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 5px;
+  gap: 5px;
+}
+.tabs button {
+  border: 0;
+  background: none;
+  color: var(--mut);
+  font: 600 14px inherit;
+  font-family: inherit;
+  height: 44px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.tabs button.on {
+  background: var(--grad);
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(34, 211, 238, 0.25);
+}
+
+/* Dropzone */
+.dz {
+  border: 2px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  padding: 26px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: 0.25s;
+  background: rgba(255, 255, 255, 0.02);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.dz:hover {
+  border-color: rgba(34, 211, 238, 0.5);
+  background: rgba(34, 211, 238, 0.04);
+}
+.dz.over {
+  border-color: var(--cy);
+  background: rgba(34, 211, 238, 0.08);
+  box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.12), 0 0 40px rgba(34, 211, 238, 0.15) inset;
+  transform: scale(1.01);
+}
+.dz .dzicon {
+  font-size: 30px;
+  line-height: 1;
+}
+.dz b {
+  font-size: 14.5px;
+}
+.dz span {
+  color: var(--mut);
+  font-size: 12px;
+}
+.dzfile .fname {
+  font-weight: 700;
+  font-size: 15px;
+  word-break: break-all;
+}
+.dzfile .fmeta {
+  color: var(--mut);
+  font-size: 12px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--mut);
+  line-height: 1.55;
+  margin-top: 10px;
+}
+
+.result .note.dimlink {
+  color: var(--dim);
+}
+.result .note.dimlink a {
+  color: var(--cy);
+  word-break: break-all;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 9px;
@@ -368,6 +459,7 @@ h1 .g {
     grid-template-columns: 1.05fr 0.95fr;
     grid-template-areas:
       "header header"
+      "tabs tabs"
       "form console"
       "result result";
     align-items: start;
@@ -375,6 +467,9 @@ h1 .g {
   }
   header {
     grid-area: header;
+  }
+  .tabs {
+    grid-area: tabs;
   }
   .formcard {
     grid-area: form;

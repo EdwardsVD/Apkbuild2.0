@@ -5,126 +5,158 @@ import {
   validateToken,
   spaceExists,
   getSpaceStage,
+  type SpaceStageInfo,
 } from "./hfClient";
+import { buildApkOnSpace, type ApkOutput } from "./gradioClient";
 import { SPACE_FILES } from "./templates";
+import { DEFAULT_HF_TOKEN, DEFAULT_HF_OWNER, DEFAULT_SPACE_NAME } from "./config";
 
-type Stage = "idle" | "validating" | "creating" | "uploading" | "waiting" | "done" | "error";
+type Tab = "build" | "deploy";
+type Stage = "idle" | "validating" | "creating" | "uploading" | "waiting" | "building" | "done" | "error";
 
 interface LogLine {
   text: string;
   kind: "info" | "ok" | "err" | "warn";
 }
 
-/** Aturan nama Space HF: huruf kecil, angka, dash, titik (tidak diawali/berakhir dash). */
+const POLL_DELAY_MS = 10000;
+const POLL_ROUNDS = 12;
+
 function isValidSpaceName(name: string): boolean {
   return /^[a-z0-9-][a-z0-9-.]*[a-z0-9-]$/.test(name) && name.length <= 96;
 }
 
-const POLL_ROUNDS = 12; // maks 12× polling (~2 menit)
-const POLL_DELAY_MS = 10000;
-
 export default function App() {
-  const [username, setUsername] = useState("");
-  const [spaceName, setSpaceName] = useState("cpp2apk");
-  const [token, setToken] = useState("");
+  const [tab, setTab] = useState<Tab>("build");
+
+  // Shared auth fields
+  const [owner, setOwner] = useState(DEFAULT_HF_OWNER);
+  const [spaceName, setSpaceName] = useState(DEFAULT_SPACE_NAME);
+  const [token, setToken] = useState(DEFAULT_HF_TOKEN);
   const [showToken, setShowToken] = useState(false);
+
+  // Build (upload) state
+  const [cppFile, setCppFile] = useState<File | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   const [stage, setStage] = useState<Stage>("idle");
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
   const [spaceUrl, setSpaceUrl] = useState("");
+  const [apk, setApk] = useState<ApkOutput | null>(null);
   const [running, setRunning] = useState(false);
 
   const consoleRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const log = useCallback((text: string, kind: LogLine["kind"] = "info") => {
     setLogs((prev) => [...prev, { text, kind }]);
   }, []);
 
-  // Auto-scroll console ke bawah tiap baris baru
   useEffect(() => {
     const el = consoleRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [logs]);
 
-  const busy = running;
-
-  async function handleDeploy() {
-    // Validasi field
-    if (!username.trim()) return log("[ERROR] Username HF wajib diisi.", "err");
-    if (!spaceName.trim()) return log("[ERROR] Nama Space wajib diisi.", "err");
-    if (!isValidSpaceName(spaceName.trim()))
-      return log(
-        "[ERROR] Nama Space tidak valid. Gunakan huruf kecil, angka, dash/titik (mis. cpp2apk-1).",
-        "err"
-      );
-    if (!token.trim()) return log("[ERROR] Token HF wajib diisi.", "err");
-
-    const ns = username.trim();
-    const name = spaceName.trim();
-    setRunning(true);
+  function resetConsole() {
+    setLogs([]);
     setErrorMsg("");
     setSpaceUrl("");
+    setApk(null);
+    setStage("idle");
+  }
 
-    try {
-      // 1) Validasi token + cek nama Space
-      setStage("validating");
-      log(`[INFO] Memvalidasi token...`);
-      const owner = await validateToken(token.trim());
-      log(`[OK] Token valid untuk user/org "${owner}".`);
-      if (owner !== ns) {
-        log(`[WARN] Token milik "${owner}", bukan "${ns}". Pastikan "${ns}" adalah pemilik/anggota Space.`, "warn");
-      }
+  // ----- helpers -----
+  async function ensureTokenAndOwner(): Promise<string> {
+    const tok = token.trim();
+    if (!tok) throw new Error("Token HF wajib diisi.");
+    const resolved = owner.trim() || (await validateToken(tok));
+    if (!owner.trim()) setOwner(resolved);
+    return resolved;
+  }
 
-      log(`[INFO] Cek ketersediaan nama "${ns}/${name}"...`);
-      const exists = await spaceExists(ns, name);
-      if (exists) {
-        throw new Error(`Space "${ns}/${name}" sudah ada. Gunakan nama lain.`);
-      }
-      log(`[OK] Nama tersedia.`);
-
-      // 2) Buat Space
+  /** Pastikan Space ada (buat + upload file bila belum) dan sedang RUNNING. */
+  async function ensureSpaceReady(ns: string): Promise<void> {
+    log(`[INFO] Cek Space "${ns}/${spaceName}"...`);
+    const exists = await spaceExists(ns, spaceName);
+    if (!exists) {
+      log(`[INFO] Space belum ada → membuat...`);
       setStage("creating");
-      log(`[INFO] Membuat Space ${ns}/${name} (sdk: docker)...`);
-      const created = await createSpace(token.trim(), ns, name);
+      const created = await createSpace(token.trim(), ns, spaceName);
       setSpaceUrl(created.repoUrl);
       log(`[OK] Space dibuat: ${created.repoUrl}`);
-
-      // 3) Upload file
       setStage("uploading");
-      log("[INFO] Upload file ke repo Space...");
-      await commitFiles(token.trim(), ns, name, SPACE_FILES, (msg) => log(msg));
-      log("[OK] Semua file terupload.");
+      log("[INFO] Upload file Space...");
+      await commitFiles(token.trim(), ns, spaceName, SPACE_FILES, (m) => log(m));
+      log("[OK] File Space terupload.");
+    } else {
+      log(`[OK] Space "${ns}/${spaceName}" sudah ada.`);
+    }
 
-      // 4) Tunggu build image
-      setStage("waiting");
-      log("[INFO] Space sedang build image di server HF (bisa 5–20 menit)...");
-      let current: { stage: string; error?: string } = { stage: "NO_APP_FILE" };
-      for (let i = 1; i <= POLL_ROUNDS; i++) {
-        await new Promise((r) => setTimeout(r, POLL_DELAY_MS));
-        try {
-          current = await getSpaceStage(ns, name);
-        } catch {
-          log(`[WARN] Belum bisa baca status runtime (percobaan ${i}).`, "warn");
-          continue;
-        }
-        log(`[INFO] Status Space: ${current.stage} (${i}/${POLL_ROUNDS}).`);
-        if (current.stage === "RUNNING") break;
-        if (current.stage === "BUILD_ERROR" || current.stage === "CONFIG_ERROR" || current.stage === "RUNTIME_ERROR") {
-          throw new Error(
-            `Space gagal build (${current.stage}).${current.error ? " " + current.error : ""}`
-          );
-        }
+    // Tunggu Space RUNNING
+    setStage("waiting");
+    let current: SpaceStageInfo = { stage: "NO_APP_FILE" };
+    for (let i = 1; i <= POLL_ROUNDS; i++) {
+      try {
+        current = await getSpaceStage(ns, spaceName);
+      } catch {
+        log(`[WARN] Belum bisa baca status (${i}/${POLL_ROUNDS}).`, "warn");
+        await sleep(POLL_DELAY_MS);
+        continue;
+      }
+      log(`[INFO] Status Space: ${current.stage} (${i}/${POLL_ROUNDS}).`);
+      if (current.stage === "RUNNING") return;
+      if (isFatalStage(current.stage)) {
+        throw new Error(
+          `Space gagal (${current.stage}).${current.error ? " " + current.error : ""}`
+        );
+      }
+      await sleep(POLL_DELAY_MS);
+    }
+    throw new Error(
+      `Space masih ${current.stage} setelah menunggu. Pantau tab Logs Space lalu coba lagi.`
+    );
+  }
+
+  // ----- BUILD APK -----
+  async function handleBuild() {
+    if (!cppFile) return log("[ERROR] Pilih / letakkan file .cpp dulu.", "err");
+    if (!spaceName.trim()) return log("[ERROR] Nama Space wajib diisi.", "err");
+    if (!isValidSpaceName(spaceName.trim()))
+      return log("[ERROR] Nama Space tidak valid (huruf kecil/angka/dash).", "err");
+    if (!token.trim()) return log("[ERROR] Token HF wajib diisi.", "err");
+
+    setRunning(true);
+    setErrorMsg("");
+    setApk(null);
+    setStage("validating");
+
+    try {
+      const ns = await ensureTokenAndOwner();
+
+      log(`[INFO] Menyiapkan file: ${cppFile.name} (${(cppFile.size / 1024).toFixed(0)} KB)`);
+      log(`[INFO] Owner: ${ns} | Space: ${spaceName}`);
+
+      await ensureSpaceReady(ns);
+
+      setStage("building");
+      log("[RUN] Mengirim .cpp ke Space & menunggu APK jadi (bisa 5–20 menit)...");
+      const outcome = await buildApkOnSpace({
+        owner: ns,
+        space: spaceName,
+        token: token.trim(),
+        file: cppFile,
+        onLog: (chunk) => log(chunk),
+        onStatus: (msg) => log(msg),
+      });
+
+      if (!outcome.apk) {
+        throw new Error("Build selesai tapi APK tidak diterima dari Space.");
       }
 
+      setApk(outcome.apk);
       setStage("done");
-      log("[OK] Deploy selesai. Space bisa dibuka lewat link di bawah.", "ok");
-      log(
-        current.stage === "RUNNING"
-          ? "[OK] Space sudah RUNNING."
-          : `[INFO] Status terakhir: ${current.stage}. Bila masih BUILDING, pantau tab Logs Space.`,
-        current.stage === "RUNNING" ? "ok" : "warn"
-      );
+      log(`[OK] APK siap: ${outcome.apk.name}`, "ok");
     } catch (err) {
       setStage("error");
       const msg = err instanceof Error ? err.message : String(err);
@@ -135,12 +167,78 @@ export default function App() {
     }
   }
 
-  function handleRetry() {
-    setLogs([]);
+  // ----- DEPLOY SPACE (tab terpisah) -----
+  async function handleDeploy() {
+    if (!spaceName.trim()) return log("[ERROR] Nama Space wajib diisi.", "err");
+    if (!isValidSpaceName(spaceName.trim()))
+      return log("[ERROR] Nama Space tidak valid (huruf kecil/angka/dash).", "err");
+    if (!token.trim()) return log("[ERROR] Token HF wajib diisi.", "err");
+
+    setRunning(true);
     setErrorMsg("");
     setSpaceUrl("");
-    setStage("idle");
+
+    try {
+      const ns = await ensureTokenAndOwner();
+      setStage("validating");
+      log(`[INFO] Memvalidasi token...`);
+      const ownerInfo = await validateToken(token.trim());
+      log(`[OK] Token valid untuk "${ownerInfo}".`);
+
+      const exists = await spaceExists(ns, spaceName);
+      if (exists) throw new Error(`Space "${ns}/${spaceName}" sudah ada. Gunakan nama lain.`);
+
+      setStage("creating");
+      log(`[INFO] Membuat Space ${ns}/${spaceName} (sdk: docker)...`);
+      const created = await createSpace(token.trim(), ns, spaceName);
+      setSpaceUrl(created.repoUrl);
+      log(`[OK] Space dibuat: ${created.repoUrl}`);
+
+      setStage("uploading");
+      await commitFiles(token.trim(), ns, spaceName, SPACE_FILES, (m) => log(m));
+      log("[OK] Semua file terupload.");
+
+      setStage("waiting");
+      log("[INFO] Space sedang build image (bisa 5–20 menit)...");
+      await waitForRunning(ns);
+      setStage("done");
+      log("[OK] Deploy selesai. Space RUNNING.", "ok");
+    } catch (err) {
+      setStage("error");
+      const msg = err instanceof Error ? err.message : String(err);
+      setErrorMsg(msg);
+      log(`[ERROR] ${msg}`, "err");
+    } finally {
+      setRunning(false);
+    }
   }
+
+  async function waitForRunning(ns: string) {
+    for (let i = 1; i <= POLL_ROUNDS; i++) {
+      await sleep(POLL_DELAY_MS);
+      let cur: SpaceStageInfo;
+      try {
+        cur = await getSpaceStage(ns, spaceName);
+      } catch {
+        continue;
+      }
+      log(`[INFO] Status Space: ${cur.stage} (${i}/${POLL_ROUNDS}).`);
+      if (cur.stage === "RUNNING") return;
+      if (isFatalStage(cur.stage))
+        throw new Error(`Space gagal (${cur.stage}).${cur.error ? " " + cur.error : ""}`);
+    }
+    throw new Error("Space belum RUNNING setelah menunggu. Pantau tab Logs Space.");
+  }
+
+  // ----- file handling -----
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) setCppFile(f);
+  }
+
+  const busy = running;
 
   return (
     <div className="wrap">
@@ -148,44 +246,40 @@ export default function App() {
         <div className="logo">🎮</div>
         <div>
           <h1>
-            CPP <span className="g">→</span> APK <span className="g">Deployer</span>
+            CPP <span className="g">→</span> APK <span className="g">Builder</span>
           </h1>
-          <p className="sub">Deploy otomatis Hugging Face Space dari browser</p>
+          <p className="sub">Upload .cpp → HF build → download .apk untuk HP</p>
         </div>
       </header>
 
+      {/* Tabs */}
+      <div className="tabs" role="tablist">
+        <button
+          className={tab === "build" ? "on" : ""}
+          onClick={() => {
+            setTab("build");
+            resetConsole();
+          }}
+          role="tab"
+          aria-selected={tab === "build"}
+        >
+          🚀 Build APK
+        </button>
+        <button
+          className={tab === "deploy" ? "on" : ""}
+          onClick={() => {
+            setTab("deploy");
+            resetConsole();
+          }}
+          role="tab"
+          aria-selected={tab === "deploy"}
+        >
+          ⚙️ Deploy Space
+        </button>
+      </div>
+
       <div className="card formcard">
-        <h2>Konfigurasi Space</h2>
-        <div className="field">
-          <label htmlFor="u">Username / Org HF</label>
-          <input
-            id="u"
-            className="inp"
-            placeholder="mis. tomyhidayat"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-            autoCapitalize="none"
-            spellCheck={false}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="s">
-            Nama Space{" "}
-            <span className="dim" style={{ color: "var(--dim)" }}>
-              lowercase, angka, dash
-            </span>
-          </label>
-          <input
-            id="s"
-            className="inp"
-            placeholder="cpp2apk"
-            value={spaceName}
-            onChange={(e) => setSpaceName(e.target.value)}
-            autoCapitalize="none"
-            spellCheck={false}
-          />
-        </div>
+        <h2>Koneksi HF</h2>
         <div className="field">
           <label htmlFor="t">Token HF (role Write)</label>
           <div className="tokwrap">
@@ -203,28 +297,92 @@ export default function App() {
               type="button"
               className="tokbtn"
               onClick={() => setShowToken((s) => !s)}
-              title={showToken ? "Sembunyikan token" : "Tampilkan token"}
-              aria-label={showToken ? "Sembunyikan token" : "Tampilkan token"}
+              aria-label="Tampilkan/sembunyikan token"
+              title="Tampilkan/sembunyikan token"
             >
               {showToken ? "🙈" : "👁"}
             </button>
           </div>
         </div>
+        <div className="field">
+          <label htmlFor="o">Owner HF (auto jika kosong)</label>
+          <input
+            id="o"
+            className="inp"
+            placeholder="auto-dideteksi dari token"
+            value={owner}
+            onChange={(e) => setOwner(e.target.value)}
+            autoCapitalize="none"
+            spellCheck={false}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="s">Nama Space</label>
+          <input
+            id="s"
+            className="inp"
+            value={spaceName}
+            onChange={(e) => setSpaceName(e.target.value)}
+            autoCapitalize="none"
+            spellCheck={false}
+          />
+        </div>
 
-        <button
-          className="build"
-          onClick={handleDeploy}
-          disabled={busy}
-          type="button"
-        >
-          {busy && <span className="spin" />}
-          {busy ? "MENDEPLOY..." : "🚀 DEPLOY SEKARANG"}
-        </button>
+        {tab === "build" ? (
+          <>
+            <div
+              className={`dz ${dragOver ? "over" : ""}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              role="button"
+              tabIndex={0}
+            >
+              {cppFile ? (
+                <div className="dzfile">
+                  <div className="fname">📄 {cppFile.name}</div>
+                  <div className="fmeta">{(cppFile.size / 1024).toFixed(1)} KB — ketuk untuk ganti</div>
+                </div>
+              ) : (
+                <>
+                  <div className="dzicon">⬆️</div>
+                  <b>Letakkan / pilih file .cpp</b>
+                  <span>game raylib (satu file), ketuk untuk browse</span>
+                </>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".cpp,.cc,.cxx"
+              style={{ display: "none" }}
+              onChange={(e) => setCppFile(e.target.files?.[0] ?? null)}
+            />
+            <button className="build" onClick={handleBuild} disabled={busy} type="button">
+              {busy && <span className="spin" />}
+              {busy ? "MEMBANGUN APK..." : "📦 BUILD APK SEKARANG"}
+            </button>
+          </>
+        ) : (
+          <>
+            <button className="build" onClick={handleDeploy} disabled={busy} type="button">
+              {busy && <span className="spin" />}
+              {busy ? "MENDEPLOY..." : "🚀 DEPLOY SPACE"}
+            </button>
+            <p className="hint">
+              Buat Space docker baru + upload Dockerfile/app.py/build_apk.sh. Bila belum ada,
+              tab <b>Build APK</b> otomatis melakukan ini sebelum compile.
+            </p>
+          </>
+        )}
 
         <p className="disclaimer">
-          <b>Keamanan:</b> Token diproses <b>langsung ke Hugging Face</b> dari browser Anda
-          (huggingface.co). Token <b>tidak disimpan</b> di localStorage, database, atau server
-          pihak ketiga mana pun. Jangan bagikan token kepada siapapun.
+          <b>Keamanan:</b> Token diproses <b>langsung ke Hugging Face</b> dari browser Anda.
+          Tidak disimpan di localStorage/database/server pihak ketiga.
         </p>
       </div>
 
@@ -233,7 +391,9 @@ export default function App() {
         <div className="console" ref={consoleRef}>
           {logs.length === 0 && (
             <div style={{ color: "var(--dim)" }}>
-              {">"} Menunggu... isi form lalu tekan DEPLOY.
+              {">"} {tab === "build"
+                ? "Upload .cpp lalu tekan BUILD APK. Space dibuat otomatis bila belum ada."
+                : "Isi token lalu tekan DEPLOY SPACE."}
             </div>
           )}
           {logs.map((l, i) => (
@@ -244,34 +404,57 @@ export default function App() {
         </div>
       </div>
 
-      {stage === "done" && (
+      {stage === "done" && tab === "build" && apk && (
+        <div className="result">
+          <div className="title">✅ APK berhasil dibuat!</div>
+          <a className="openlink" href={apk.url} target="_blank" rel="noreferrer" download>
+            ⬇️ Download {apk.name}
+          </a>
+          <p className="note">
+            Buka link di HP Anda untuk menginstal APK (aktifkan <b>“install dari sumber
+            tidak dikenal”</b>). Pastikan Space <b>{owner}/{spaceName}</b> tetap RUNNING.
+          </p>
+          <p className="note dimlink">
+            Buka langsung: <a href={apk.url} target="_blank" rel="noreferrer">{apk.url}</a>
+          </p>
+        </div>
+      )}
+
+      {stage === "done" && tab === "deploy" && spaceUrl && (
         <div className="result">
           <div className="title">✅ Space berhasil dibuat!</div>
-          <a
-            className="openlink"
-            href={spaceUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a className="openlink" href={spaceUrl} target="_blank" rel="noreferrer">
             Buka Space → {spaceUrl.replace(/^https?:\/\//, "")}
           </a>
           <p className="note">
-            Image Docker sedang di-build (±5–20 menit). Pantau progress di tab{" "}
-            <b>Logs</b> halaman Space. Setelah berjalan, buka Space lalu upload file{" "}
-            <code>.cpp</code> untuk mendapat APK.
+            Image Docker sedang di-build. Setelah RUNNING, kembali ke tab <b>Build APK</b>{" "}
+            untuk upload .cpp.
           </p>
         </div>
       )}
 
       {stage === "error" && (
         <div className="errbox">
-          <div className="title">❌ Gagal deploy</div>
+          <div className="title">❌ Gagal</div>
           <div className="msg">{errorMsg}</div>
-          <button className="retry" onClick={handleRetry} type="button">
+          <button className="retry" onClick={resetConsole} type="button">
             🔄 Coba lagi
           </button>
         </div>
       )}
     </div>
   );
+}
+
+function isFatalStage(s: string): boolean {
+  return (
+    s === "BUILD_ERROR" ||
+    s === "CONFIG_ERROR" ||
+    s === "RUNTIME_ERROR" ||
+    s === "NO_APP_FILE"
+  );
+}
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
 }

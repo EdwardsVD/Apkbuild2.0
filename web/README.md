@@ -1,62 +1,81 @@
-# 🎮 CPP → APK Deployer (Web)
+# 🎮 CPP → APK Builder (Web)
 
-Satu halaman web (mobile-first) untuk **deploy otomatis Hugging Face Space**
-(CPP to APK Builder) — user tinggal paste HF token, tekan tombol, dan seluruh
-proses (buat repo Space, upload Dockerfile/app.py/dll) berjalan otomatis.
+Web app (mobile-first) untuk mengubah file `.cpp` berbasis **raylib** menjadi
+`.apk` Android **secara instan** via Hugging Face:
 
-Murni **client-side** (Opsi A): request dikirim langsung dari browser ke
-`huggingface.co` via package resmi [`@huggingface/hub`](https://www.npmjs.com/package/@huggingface/hub).
-Token **tidak pernah** disimpan di localStorage/database, tidak dikirim ke
-server lain, dan tidak di-log.
+**User upload `.cpp` → web kirim ke HF (pakai token user) → Space yang sudah
+di-setup meng-compile ke `.apk` → `.apk` balik ke web untuk didownload & diinstall.**
+
+Space HF dibuat **otomatis** bila belum ada (buat repo + upload Dockerfile/app.py/build_apk.sh).
+
+Murni **client-side** (Opsi A): request langsung dari browser ke `huggingface.co`
+via package resmi [`@huggingface/hub`](https://www.npmjs.com/package/@huggingface/hub)
+(deploy) dan [`@gradio/client`](https://www.npmjs.com/package/@gradio/client)
+(panggil fungsi build di Space). Token **tidak pernah** disimpan di
+localStorage/database/server pihak ketiga.
 
 ## Fitur
 
-- Input Username / Org HF, Nama Space, dan Token HF (role Write).
-- Field token `type="password"` + tombol show/hide (👁/🙈).
-- Validasi nama Space (huruf kecil/angka/dash/titik) sebelum deploy.
-- Validasi token via `whoAmI`, dan cek ketersediaan nama sebelum create
-  (error jelas, bukan raw 409).
-- Alur progress: `idle → validating → creating → uploading → waiting → done/error`.
-- Console log live (auto-scroll), font monospace, background gelap `#060910`.
-- Poll status runtime Space (`BUILDING` / `RUNNING` / `BUILD_ERROR`) setelah
-  upload.
-- Kartu hasil dengan link tap-able ke Space + tombol "Coba lagi" bila gagal.
+- **Tab 🚀 Build APK**: upload `.cpp` (drag & drop) → otomatis validasi token,
+  buat Space bila perlu, tunggu RUNNING, lalu compile → kartu **Download APK**.
+- **Tab ⚙️ Deploy Space**: buat Space docker + upload file manual.
+- Owner HF **auto-dideteksi dari token** (`whoAmI`) — tak perlu ketik username.
+- Token `type=password` + tombol 👁/🙈; nilai default dari `.env` (`VITE_HF_TOKEN`).
+- Validasi nama Space & pesan error spesifik (401/403/409).
+- Console log live (auto-scroll, monospace, background `#060910`).
 - Dark theme + gradient `#22d3ee → #8b5cf6`, mobile-first, tap-target ≥ 44px.
+
+## Alur Build APK
+
+`idle → validating → creating (bila perlu) → uploading (bila perlu) → waiting → building → done/error`
+
+1. Validasi token & deteksi owner.
+2. Pastikan Space `owner/space` ada & **RUNNING** (buat + upload file bila belum).
+3. Connect via `@gradio/client` ke fungsi `build_apk` Space.
+4. Kirim file `.cpp`, stream log build, terima URL `.apk`.
+5. Tampilkan tombol download APK.
 
 ## Struktur
 
 ```
 web/
 ├── index.html
-├── package.json
+├── package.json / package-lock.json
 ├── vite.config.ts
 ├── tsconfig.json
+├── .env.example           # contoh env (JANGAN commit .env berisi token asli)
 └── src/
     ├── main.tsx
-    ├── App.tsx          # UI + orchestrator deploy
-    ├── hfClient.ts      # wrapper @huggingface/hub (create/upload/status)
-    ├── templates.ts     # SPACE_FILES — isi file Space (via import ?raw)
+    ├── App.tsx            # UI + orchestrator (tab Build / Deploy)
+    ├── hfClient.ts        # wrapper @huggingface/hub (create/upload/status)
+    ├── gradioClient.ts    # wrapper @gradio/client (panggil build_apk → .apk)
+    ├── templates.ts       # SPACE_FILES — isi file Space (import ?raw)
+    ├── config.ts          # nilai default dari env
     ├── index.css
-    └── space_files/     # konten asli Space (Dockerfile, app.py, build_apk.sh, ...)
+    └── space_files/       # konten asli Space (Dockerfile, app.py, build_apk.sh, ...)
 ```
 
 > `src/templates.ts` mengambil isi file Space langsung dari `space_files/`
-> memakai import `?raw` Vite — byte-per-byte sama dengan yang di-push, tanpa
-> risiko salah-escape `${...}`/backtick.
+> via import `?raw` Vite — byte-per-byte sama dengan yang di-push.
 
 ## Menjalankan
 
 ```bash
+cp .env.example .env      # isi VITE_HF_TOKEN (opsional untuk prefill)
 npm install
-npm run dev      # dev server di http://localhost:5173
-npm run build    # build produksi ke dist/
-npm run preview  # preview hasil build
+npm run dev               # http://localhost:5173
+npm run build             # produksi ke dist/
+npm run preview
 ```
 
-Deploy hasil `dist/` ke hosting statis apa pun (Vercel/Netlify/GitHub Pages).
+Deploy `dist/` ke hosting statis apa pun (Vercel/Netlify/GitHub Pages).
 
-## Keamanan token
+## ⚠️ Keamanan token
 
-Token diproses **langsung ke Hugging Face** dari browser Anda dan tidak
-disimpan di server/manapun. Gunakan token role **Write** yang dibuat di
-https://huggingface.co/settings/tokens.
+- **JANGAN commit `.env` ke repo publik** — token akan bocor ke siapa pun.
+- Token diproses **langsung ke Hugging Face** dari browser Anda, tidak
+  disimpan di server/manapun.
+- Karena repo ini **publik**, token sengaja **tidak di-hardcode** di source.
+  Set via `.env` (build lokal) atau tempel manual di UI.
+- Bila repo/space jadi publik dan token sempat ter-ekspos, **rotasi token** di
+  https://huggingface.co/settings/tokens.

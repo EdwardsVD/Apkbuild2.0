@@ -126,10 +126,15 @@ export async function commitFiles(
 }
 
 /** Ambil stage runtime Space (BUILDING / RUNNING / ERROR, dll). */
+export interface SpaceStageInfo {
+  stage: SpaceStage;
+  error?: string;
+}
+
 export async function getSpaceStage(
   namespace: string,
   name: string
-): Promise<{ stage: SpaceStage; error?: string }> {
+): Promise<SpaceStageInfo> {
   try {
     const info = await spaceInfo({
       name: `${namespace}/${name}`,
