@@ -1,0 +1,20 @@
+node_modules/
+dist/
+dist-ssr/
+*.local
+*.tsbuildinfo
+
+# jangan sampai artefak JS hasil kompilasi membayangi vite.config.ts
+vite.config.js
+vite.config.d.ts
+
+# env
+.env
+.env.*
+!.env.example
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store

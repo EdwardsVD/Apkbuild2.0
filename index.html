@@ -215,6 +215,22 @@ footer b{color:var(--mut)}
 .gd-thinking .dots span:nth-child(2){animation-delay:.2s}
 .gd-thinking .dots span:nth-child(3){animation-delay:.4s}
 @keyframes gdDot{0%,80%,100%{opacity:.25;transform:scale(.7)}40%{opacity:1;transform:scale(1.1)}}
+/* streaming activity bar (grey label + sweeping white "I" cursor) */
+.gd-activity{display:none;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.06);font:11.5px/1 ui-monospace,Consolas,monospace}
+.gd-activity.show{display:block;animation:fadeUp .2s ease}
+.gd-activity .row{display:flex;align-items:center;gap:9px}
+.gd-activity .act-tag{color:#93a0bd;font-weight:600;white-space:nowrap}
+.gd-activity .act-name{color:#cdd7ef;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:40%}
+.gd-activity .act-track{position:relative;flex:1;height:6px;min-width:40px;background:rgba(255,255,255,.08);border-radius:6px;overflow:hidden}
+.gd-activity .act-cursor{position:absolute;top:0;bottom:0;width:12px;background:#fff;border-radius:4px;box-shadow:0 0 9px rgba(255,255,255,.85);animation:actSweep 1s linear infinite}
+@keyframes actSweep{0%{left:-14px}100%{left:100%}}
+.gd-stream-body{min-height:8px;font-size:13px;line-height:1.65;word-break:break-word}
+.gd-stream-body .sblink{color:var(--dim);font-style:italic}
+.gd-msg .fstats{display:inline-flex;gap:6px;font-family:ui-monospace,Consolas,monospace;font-size:11px;margin-left:6px;color:var(--ok)}
+.gd-msg .fstats .del{color:var(--err)}
+.gd-file-item .fadd{color:var(--ok);font-family:ui-monospace,monospace;font-size:10.5px;margin-left:5px;font-weight:700}
+.gd-file-item .fdelc{color:var(--err);font-family:ui-monospace,monospace;font-size:10.5px;margin-left:5px;font-weight:700}
+.gd-file-item .fstat{color:var(--dim);font-size:10px;margin-left:6px;font-family:ui-monospace,monospace}
 @media(max-width:768px){
   .gd-body{flex-direction:column}
   .gd-left{width:100%;max-height:45%;border-right:0;border-bottom:1px solid rgba(255,255,255,.07)}
@@ -235,7 +251,7 @@ footer b{color:var(--mut)}
       <h1>W2A <span class="g">Studio</span></h1>
       <div class="sub">Deploy ZIP &middot; HTML &middot; TSX &middot; URL &middot; C++ &middot; C# menjadi <b>.APK</b> Android (WebView) — 100% di browser</div>
     </div>
-    <span class="badge">TANPA SERVER &middot; PRIVASI AMAN</span>
+    <span class="badge">TANPA SERVER &middot; PRIVASI AMAN &middot; V0.2.0</span>
     <button class="gd-btn" id="gdBtn" title="Game Dev Studio">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="4"/><line x1="6" y1="10" x2="6" y2="14"/><line x1="4" y1="12" x2="8" y2="12"/><circle cx="15.5" cy="10.5" r=".8" fill="currentColor"/><circle cx="18.5" cy="12.5" r=".8" fill="currentColor"/></svg>
     </button>
@@ -444,7 +460,7 @@ footer b{color:var(--mut)}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="field">
           <label>Versi</label>
-          <input class="inp" id="inVersion" maxlength="24" value="0.0.1" autocomplete="off">
+          <input class="inp" id="inVersion" maxlength="24" value="0.2.0" autocomplete="off">
         </div>
         <div class="field">
           <label>Nama paket (tetap)</label>
@@ -502,17 +518,17 @@ footer b{color:var(--mut)}
 <!-- ========== GAME DEV OVERLAY ========== -->
 <div class="gd-overlay" id="gdOverlay">
   <div class="gd-loading" id="gdLoading">
-    <h2>🎮 Game Dev</h2>
+    <h2>Game Dev</h2>
     <div class="sub">Initializing AI Studio Environment...</div>
     <div class="bar-wrap"><div class="bar-fill" id="gdBar"></div></div>
     <div class="pct" id="gdPct">0%</div>
   </div>
   <div class="gd-ide" id="gdIde">
     <div class="gd-topbar">
-      <h3>🎮 <span>Game Dev</span> Studio</h3>
+      <h3><span>Game Dev</span> Studio</h3>
       <div class="spacer"></div>
-      <button id="gdClearChat" title="Clear chat history">🗑 Clear</button>
-      <button class="close-btn" id="gdClose">✕ Close</button>
+      <button id="gdClearChat" title="Clear chat history">Clear</button>
+      <button class="close-btn" id="gdClose">Close</button>
     </div>
     <div class="gd-body">
       <div class="gd-left">
@@ -545,18 +561,19 @@ footer b{color:var(--mut)}
         <div class="gd-chat-toolbar">
           <div class="gd-prov" id="gdProv">
             <button data-p="gemini" class="on">Gemini</button>
-            <button data-p="hf">🤗 HF</button>
+            <button data-p="hf">HF</button>
           </div>
           <select class="gd-toolbar select" id="gdModelSel">
             <option value="gemini-2.0-flash">gemini-2.0-flash</option>
             <option value="gemini-2.5-flash-preview-05-20">gemini-2.5-flash-preview</option>
             <option value="gemini-2.5-pro-preview-05-06">gemini-2.5-pro-preview</option>
             <option value="gemini-1.5-flash">gemini-1.5-flash</option>
-            <option value="__custom__">✏️ Custom model...</option>
+            <option value="gemini-3.6-flash">gemini-3.6-flash</option>
+            <option value="__custom__">Custom model...</option>
           </select>
           <div class="gd-hf-search" id="gdHfSearchWrap" style="display:none">
             <input id="gdHfQuery" placeholder="Search HF models..." autocomplete="off">
-            <button id="gdHfSearchBtn">🔍</button>
+            <button id="gdHfSearchBtn">Cari</button>
           </div>
           <div class="spacer" style="flex:1"></div>
           <span style="font-size:10px;color:var(--dim)" id="gdModelLabel">gemini-2.0-flash</span>
@@ -564,13 +581,13 @@ footer b{color:var(--mut)}
         <div id="gdHfResults" class="gd-hf-results" style="display:none"></div>
         <div class="gd-msgs" id="gdMsgs"></div>
         <div class="gd-input-row">
-          <textarea id="gdInput" placeholder="Describe your game... AI writes code to File System ✨" rows="1"></textarea>
+          <textarea id="gdInput" placeholder="Describe your game... AI writes code to File System" rows="1"></textarea>
           <button id="gdSend" title="Send message">
             <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
         </div>
         <details class="gd-settings">
-          <summary>⚙️ Advanced: CORS Proxy, Custom Model Endpoint</summary>
+          <summary>Advanced: CORS Proxy, Custom Model Endpoint</summary>
           <div class="srow">
             <label>CORS Proxy:</label>
             <input id="gdCors" placeholder="https://corsproxy.io/?" style="flex:1;min-width:140px">
@@ -1668,7 +1685,7 @@ let _gkIdx = Math.floor(Math.random()*GEMINI_KEYS.length);
 function nextGK(){ return GEMINI_KEYS[(_gkIdx++) % GEMINI_KEYS.length]; }
 
 /* ===== SYSTEM PROMPT ===== */
-const SYS_PROMPT = "You are GameDev AI, an expert game development assistant for W2A Game Dev Studio. You create C++ and C# games deployable as Android APK files.\n\nCRITICAL OUTPUT RULES:\n1. When writing or modifying code, ALWAYS wrap it in a fenced code block with the file: prefix:\n   ```file:filename.cpp\n   // complete code here\n   ```\n   or for C#:\n   ```file:filename.cs\n   // complete code here\n   ```\n2. The code blocks with \"file:\" prefix are automatically extracted to the File System panel.\n3. Keep chat explanations BRIEF - focus on writing working code.\n4. Always provide COMPLETE, COMPILABLE code - no placeholders like \"// ...\" or \"TODO\".\n5. For C++: use iostream, string, vector, cmath, cstdlib, ctime, etc. Console games with cin/cout.\n6. For C#: use System namespace, Console.WriteLine/ReadLine. Console applications.\n7. When editing existing files, output the ENTIRE updated file content with the same filename.\n8. Use descriptive filenames (e.g., main.cpp, game.cpp, player.h, engine.cs).\n9. Include helpful comments in the code.\n10. Make games fun, interactive, and playable in a console/terminal environment.\n11. If the user's project already has files, READ them and build upon them.\n\nYou have access to the user's current project files shown in context.";
+const SYS_PROMPT = "You are GameDev AI, an expert game development assistant for W2A Game Dev Studio. You create C++ and C# games deployable as Android APK files.\n\nCRITICAL OUTPUT RULES:\n1. When writing NEW code, ALWAYS wrap it in a fenced code block with the file: prefix:\n   ```file:filename.cpp\n   // complete code here\n   ```\n   or for C#:\n   ```file:filename.cs\n   // complete code here\n   ```\n2. The code blocks with \"file:\" prefix are automatically extracted to the File System panel and stream into the file in real time.\n3. When EDITING an existing file, output the ENTIRE updated file content with the same filename.\n4. To DELETE a file from the File System, put this marker on its own line exactly:\n   delete:filename.cpp\n   Do NOT surround the delete marker in code fences.\n5. Keep chat explanations BRIEF - focus on writing working code.\n6. Always provide COMPLETE, COMPILABLE code - no placeholders like \"// ...\" or \"TODO\".\n7. For C++: use iostream, string, vector, cmath, cstdlib, ctime, etc. Console games with cin/cout.\n8. For C#: use System namespace, Console.WriteLine/ReadLine. Console applications.\n9. Use descriptive filenames (e.g., main.cpp, game.cpp, player.h, engine.cs).\n10. Include helpful comments in the code.\n11. Make games fun, interactive, and playable in a console/terminal environment.\n12. If the user's project already has files, READ them and build upon them.\n\nYou have access to the user's current project files shown in context.";
 
 /* ===== SAMPLE CODE ===== */
 const SAMPLE_CPP = '#include <iostream>\n#include <string>\n#include <cstdlib>\n#include <ctime>\nusing namespace std;\n\n// =============================================\n//  Number Quest - A Text RPG\n//  Built with Game Dev Studio\n// =============================================\n\nclass Game {\n    string playerName;\n    int score;\n    int level;\n\npublic:\n    Game() : score(0), level(1) {\n        srand(time(0));\n    }\n\n    void start() {\n        cout << "=== NUMBER QUEST - A Text RPG ===" << endl;\n        cout << "Enter your name, hero: ";\n        getline(cin, playerName);\n        cout << "Welcome, " << playerName << "! Your quest begins..." << endl;\n        cout << "Guess the magic number to defeat each boss!" << endl << endl;\n    }\n\n    void playLevel() {\n        int maxNum = 10 + (level * 10);\n        int secret = (rand() % maxNum) + 1;\n        int guesses = 0;\n        int maxGuesses = 5 + level;\n\n        cout << "--- Level " << level << " ---" << endl;\n        cout << "The boss hides a number between 1 and " << maxNum << "!" << endl;\n        cout << "You have " << maxGuesses << " attempts." << endl << endl;\n\n        while (guesses < maxGuesses) {\n            int guess;\n            cout << "Your guess (" << (guesses+1) << "/" << maxGuesses << "): ";\n            cin >> guess;\n            cin.ignore(1000, \'\\n\');\n            guesses++;\n\n            if (guess == secret) {\n                int pts = (maxGuesses - guesses + 1) * level * 10;\n                score += pts;\n                cout << "Critical hit! The number was " << secret << "!" << endl;\n                cout << "+" << pts << " points! Total: " << score << endl << endl;\n                return;\n            } else if (guess < secret) {\n                cout << "Too low! The boss laughs..." << endl;\n            } else {\n                cout << "Too high! The boss dodges..." << endl;\n            }\n        }\n        cout << "The number was " << secret << ". You failed this level!" << endl << endl;\n    }\n\n    void run() {\n        start();\n        for (level = 1; level <= 5; level++) {\n            playLevel();\n        }\n        cout << "=== GAME COMPLETE! ===" << endl;\n        cout << "Hero: " << playerName << endl;\n        cout << "Final Score: " << score << endl;\n        if (score >= 200) cout << "Rank: LEGENDARY" << endl;\n        else if (score >= 100) cout << "Rank: HERO" << endl;\n        else cout << "Rank: ADVENTURER" << endl;\n    }\n};\n\nint main() {\n    Game game;\n    game.run();\n    return 0;\n}';
@@ -1678,11 +1695,26 @@ let gdFiles = [];
 let gdMessages = [];
 let gdActiveIdx = -1;
 let gdProvider = "gemini";
-let gdGeminiModel = "gemini-2.0-flash";
 let gdHfModel = "Qwen/Qwen2.5-72B-Instruct";
 let gdCorsProxy = "";
 let gdSending = false;
 let gdInitialized = false;
+
+/* saved custom gemini models (persisted, more than template) */
+const GD_MODELS = ["gemini-2.0-flash","gemini-2.5-flash-preview-05-20","gemini-2.5-pro-preview-05-06","gemini-1.5-flash","gemini-3.6-flash"];
+const CUSTOM_KEY = "w2a_gd_custom_models_v2";
+const MODEL_KEY = "w2a_gd_gemini_model_v2";
+let gdCustomModels = [];
+try{ gdCustomModels = JSON.parse(localStorage.getItem(CUSTOM_KEY)||"[]")||[]; }catch(e){ gdCustomModels=[]; }
+function saveCustomModels(){ try{ localStorage.setItem(CUSTOM_KEY, JSON.stringify(gdCustomModels)); }catch(e){} }
+function addCustomModel(n){ n=(n||"").trim(); if(n && !GD_MODELS.includes(n) && !gdCustomModels.includes(n)){ gdCustomModels.push(n); saveCustomModels(); } }
+function isCustomGemini(n){ n=(n||"").trim(); return n && !GD_MODELS.includes(n); }
+let gdGeminiModel = (function(){ try{ const v=localStorage.getItem(MODEL_KEY); return v||"gemini-2.0-flash"; }catch(e){ return "gemini-2.0-flash"; } })();
+function saveModel(){ try{ localStorage.setItem(MODEL_KEY, gdGeminiModel); }catch(e){} }
+
+/* live streaming state */
+let liveStatus = {};       // name -> {name,isEdit,active,added,removed,deleted}
+let gdOrig = {};           // original file contents at send start (for diff)
 
 /* ===== DOM REFS ===== */
 const $ = id => document.getElementById(id);
@@ -1701,10 +1733,10 @@ const gdInput = $("gdInput");
 /* ===== UTILITIES ===== */
 function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function fileIcon(name){
-  if(/\.(cpp|cc|cxx|c)$/i.test(name)) return "\u2699\uFE0F";
-  if(/\.(h|hpp)$/i.test(name)) return "\uD83D\uDCCB";
-  if(/\.cs$/i.test(name)) return "\uD83D\uDD37";
-  return "\uD83D\uDCC4";
+  if(/\.(cpp|cc|cxx|c)$/i.test(name)) return "<b>CPP</b>";
+  if(/\.(h|hpp)$/i.test(name)) return "<b>H</b>";
+  if(/\.cs$/i.test(name)) return "<b>CS</b>";
+  return "<b>TXT</b>";
 }
 
 /* ===== OPEN / CLOSE ===== */
@@ -1749,19 +1781,42 @@ function showFileList(){
   gdFileList.style.display = "";
   gdCodeWrap.classList.remove("active");
   gdActiveIdx = -1;
+  renderFileList();
+}
+
+function renderFileList(){
   gdFileList.innerHTML = "";
+  /* activity bar */
+  const act = getActiveStatus();
+  if(act){
+    const actDiv = document.createElement("div");
+    actDiv.className = "gd-activity show";
+    actDiv.innerHTML = '<div class="row"><span class="act-tag">'+(act.isEdit?"Edit ":"Generate ")+'</span><span class="act-name">'+esc(act.name)+'</span><span class="act-track"><span class="act-cursor"></span></span></div>';
+    gdFileList.appendChild(actDiv);
+  }
+  /* file items */
   gdFiles.forEach((f,i)=>{
     const div = document.createElement("div");
     div.className = "gd-file-item";
-    div.innerHTML = '<span class="ficon">' + fileIcon(f.name) + '</span><span class="fname">' + esc(f.name) + '</span><button class="fdel" title="Delete">\u00D7</button>';
+    const st = liveStatus[f.name];
+    let extra = "";
+    if(st && st.deleted) extra = '<span class="fdelc">deleted</span>';
+    else if(st && !st.active && st.isEdit) extra = '<span class="fadd">+'+st.added+'</span><span class="fdelc">-'+st.removed+'</span>';
+    div.innerHTML = '<span class="ficon">' + fileIcon(f.name) + '</span><span class="fname">' + esc(f.name) + '</span>' + extra + '<button class="fdel" title="Delete">\u00D7</button>';
     div.querySelector(".fname").addEventListener("click",()=>openFileEditor(i));
     div.querySelector(".fdel").addEventListener("click",(e)=>{
       e.stopPropagation();
+      if(gdSending){ alert("Wait - AI is still working."); return; }
       if(gdFiles.length<=1){alert("Cannot delete the last file.");return;}
-      gdFiles.splice(i,1); showFileList();
+      gdFiles.splice(i,1); delete liveStatus[f.name]; renderFileList();
     });
     gdFileList.appendChild(div);
   });
+}
+
+function getActiveStatus(){
+  for(const k in liveStatus){ if(liveStatus[k] && liveStatus[k].active) return liveStatus[k]; }
+  return null;
 }
 
 function openFileEditor(idx){
@@ -1770,6 +1825,7 @@ function openFileEditor(idx){
   gdCodeWrap.classList.add("active");
   gdCodeName.textContent = gdFiles[idx].name;
   gdCodeArea.value = gdFiles[idx].content;
+  gdCodeArea.scrollTop = gdCodeArea.scrollHeight;
 }
 function hideCodeEditor(){ gdCodeWrap.classList.remove("active"); gdFileList.style.display = ""; }
 
@@ -1783,7 +1839,7 @@ $("gdFileInput").addEventListener("change", async (e)=>{
     const ei = gdFiles.findIndex(x=>x.name===f.name);
     if(ei>=0) gdFiles[ei].content = content; else gdFiles.push({name:f.name, content});
   }
-  showFileList(); e.target.value = "";
+  renderFileList(); e.target.value = "";
 });
 
 $("gdNewBtn").addEventListener("click",()=>{
@@ -1791,7 +1847,7 @@ $("gdNewBtn").addEventListener("click",()=>{
   if(!name||!name.trim()) return;
   const n=name.trim(), isCs=/\.cs$/i.test(n), base=n.replace(/\.\w+$/,"");
   gdFiles.push({name:n, content: isCs ? 'using System;\n\nclass '+base+' {\n    static void Main() {\n        Console.WriteLine("Hello from '+n+'");\n    }\n}\n' : '#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello from '+n+'" << endl;\n    return 0;\n}\n'});
-  showFileList(); openFileEditor(gdFiles.length-1);
+  renderFileList(); openFileEditor(gdFiles.length-1);
 });
 
 $("gdDeploy").addEventListener("click",()=>{
@@ -1816,7 +1872,7 @@ $("gdDeploy").addEventListener("click",()=>{
 
 /* ===== CHAT ===== */
 function addWelcome(){
-  gdMessages.push({role:"assistant",content:"Welcome to **Game Dev Studio**!\n\nI'm your AI game development assistant. I can:\n- Create C++ and C# games\n- Write code directly to the File System (left panel)\n- Edit and update your existing files\n- Deploy your game as an Android APK\n\n**How to use:**\n1. Tell me what game to build\n2. I'll write the code to the File System automatically\n3. Click files to view/edit them\n4. Hit **Deploy APK** when ready!\n\nYour project has `sample.cpp` - a Number Quest RPG. Ask me to modify it or create something new!",sender:"system"});
+  gdMessages.push({role:"assistant",content:"Welcome to **Game Dev Studio**!\n\nI'm your AI game development assistant. I can:\n- Create C++ and C# games\n- Write code directly to the File System (left panel) in real time\n- Edit and update your existing files\n- Delete files from your project when needed\n- Deploy your game as an Android APK\n\n**How to use:**\n1. Tell me what game to build\n2. I'll write the code to the File System automatically\n3. Click files to view/edit them\n4. Hit **Deploy APK** when ready!\n\nYour project has `sample.cpp` - a Number Quest RPG. Ask me to modify it or create something new!",sender:"system"});
 }
 
 function renderMsgs(){
@@ -1828,7 +1884,7 @@ function renderMsgs(){
       const s=document.createElement("div");s.className="sender";
       s.textContent=msg.error?"Error":(msg.sender==="hf"?"HuggingFace":msg.sender==="system"?"System":"Gemini");
       div.appendChild(s);
-      if(msg.files&&msg.files.length){for(const fn of msg.files){const b=document.createElement("span");b.className="gd-fbadge";b.textContent=fn;b.addEventListener("click",()=>{const idx=gdFiles.findIndex(f=>f.name===fn);if(idx>=0)openFileEditor(idx);});div.appendChild(b);}}
+      if(msg.files&&msg.files.length){for(const fn of msg.files){const b=document.createElement("span");b.className="gd-fbadge";const st=msg.fileStats&&msg.fileStats[fn];b.textContent=fn+(st&&st.isEdit?" +"+st.added+" -"+st.removed:"");b.addEventListener("click",()=>{const idx=gdFiles.findIndex(f=>f.name===fn);if(idx>=0)openFileEditor(idx);});div.appendChild(b);}}
     }
     const c=document.createElement("div");c.innerHTML=renderMd(msg.content);div.appendChild(c);gdMsgs.appendChild(div);
   }
@@ -1844,13 +1900,176 @@ function renderMd(text){
   return h;
 }
 
-function parseResponse(text){
-  const extracted=[];
-  const regex=/```file:(\S+)\s*\n([\s\S]*?)```/g;
-  let m;while((m=regex.exec(text))!==null) extracted.push({name:m[1].trim(),content:m[2].trim()});
-  let display=text.replace(/```file:\S+\s*\n[\s\S]*?```/g,(match)=>{const nm=match.match(/```file:(\S+)/);return "Saved `"+(nm?nm[1]:"file")+"` to File System";});
-  return{display,extracted};
+/* ===== STREAMING PARSER ===== */
+function diffStats(oldC,newC){
+  const a=String(oldC||"").split("\n"), b=String(newC||"").split("\n");
+  const n=a.length,m=b.length;
+  const dp=Array.from({length:n+1},()=>new Array(m+1).fill(0));
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)
+    dp[i][j]= a[i]===b[j]? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+  let added=0,removed=0,i=0,j=0;
+  while(i<n&&j<m){
+    if(a[i]===b[j]){i++;j++;}
+    else if(dp[i+1][j]>=dp[i][j+1]){removed++;i++;}
+    else {added++;j++;}
+  }
+  added+=(m-j); removed+=(n-i);
+  return {added,removed};
 }
+
+/* parse accumulated response text into completed files, deleted names, active block */
+function parseStream(raw){
+  const completed=[]; const deleted=[];
+  /* deletes */
+  const dRe=/(?:^|\n)\s*delete:\s*([\w][\w.\/-]*)/g;
+  let m; while((m=dRe.exec(raw))!==null){ deleted.push(m[1].trim()); }
+  const rawNoDel=raw.replace(dRe,"");
+  /* completed file blocks */
+  const blockRe=/```file:(\S+)\s*\n([\s\S]*?)```/g;
+  let mm; while((mm=blockRe.exec(rawNoDel))!==null){ completed.push({name:mm[1].trim(), content:mm[2]}); }
+  /* active (unclosed) trailing block */
+  let active=null;
+  const lastOpen=rawNoDel.lastIndexOf("```file:");
+  if(lastOpen!==-1){
+    const after=rawNoDel.slice(lastOpen);
+    const contentStart=after.indexOf("\n");
+    if(contentStart!==-1){
+      const closing=after.indexOf("```", contentStart);
+      if(closing===-1){
+        const nameMatch=after.match(/^```file:(\S+)/);
+        active={ name:nameMatch?nameMatch[1].trim():"", partial:after.slice(contentStart+1) };
+      }
+    }
+  }
+  return {completed, deleted, active};
+}
+
+/* apply parsed result to the file system in real time */
+function applyParsed(parsed){
+  /* deletes */
+  for(const dn of parsed.deleted){
+    const idx=gdFiles.findIndex(f=>f.name===dn);
+    if(idx>=0){ gdFiles.splice(idx,1); }
+    delete liveStatus[dn];
+    liveStatus[dn] = {name:dn,isEdit:true,active:false,added:0,removed:0,deleted:true};
+    if(gdActiveIdx>=0 && gdActiveIdx<gdFiles.length){} 
+  }
+  /* completed files */
+  for(const cf of parsed.completed){
+    const idx=gdFiles.findIndex(f=>f.name===cf.name);
+    const old = (gdOrig && gdOrig[cf.name]!==undefined) ? gdOrig[cf.name] : "";
+    const st = diffStats(old, cf.content);
+    if(idx>=0){ gdFiles[idx].content = cf.content; }
+    else { gdFiles.push({name:cf.name, content:cf.content}); }
+    liveStatus[cf.name] = {name:cf.name, isEdit: (old!=="" && gdOrig[cf.name]!==undefined), active:false, added:st.added, removed:st.removed};
+  }
+  /* active block */
+  if(parsed.active){
+    const a=parsed.active;
+    const idx=gdFiles.findIndex(f=>f.name===a.name);
+    const isEdit = (gdOrig && gdOrig[a.name]!==undefined) || idx>=0;
+    if(idx>=0) gdFiles[idx].content = a.partial;
+    else gdFiles.push({name:a.name, content:a.partial});
+    liveStatus[a.name] = {name:a.name, isEdit, active:true, partial:a.partial, added:0, removed:0};
+  }
+  /* clear active flag on files no longer active in the parsed text */
+  if(parsed.active){
+    for(const k in liveStatus){
+      if(liveStatus[k].active && liveStatus[k].name!==parsed.active.name){ liveStatus[k].active=false; }
+    }
+  }
+  /* sync open editor if the active file is being edited */
+  if(gdActiveIdx>=0 && gdActiveIdx<gdFiles.length && gdCodeName.textContent===gdFiles[gdActiveIdx].name){
+    if(gdCodeArea.value!==gdFiles[gdActiveIdx].content){
+      gdCodeArea.value = gdFiles[gdActiveIdx].content;
+      gdCodeArea.scrollTop = gdCodeArea.scrollHeight;
+    }
+  }
+  renderFileList();
+}
+
+/* build a stream-friendly display (collapse file code blocks) */
+function buildStreamDisplay(raw){
+  let d=raw.replace(/(?:^|\n)\s*delete:\s*\S+\s*(?=\n|$)/g,"");
+  let activeName=null;
+  const lastOpen=d.lastIndexOf("```file:");
+  if(lastOpen!==-1){
+    const after=d.slice(lastOpen);
+    const contentStart=after.indexOf("\n");
+    if(contentStart!==-1 && after.indexOf("```", contentStart)===-1){
+      activeName=(after.match(/^```file:(\S+)/)||[])[1]||"file";
+      d=d.slice(0,lastOpen);
+    }
+  }
+  d=d.replace(/```file:(\S+)\s*\n([\s\S]*?)```/g,(m,nm)=>{
+    nm=nm.trim();
+    const isEdit = gdOrig && gdOrig[nm]!==undefined;
+    return isEdit? "Editing `"+nm+"`..." : "Generating `"+nm+"`...";
+  });
+  if(activeName){
+    const isEdit = gdOrig && gdOrig[activeName]!==undefined;
+    d+= "\n\n_"+(isEdit?"Editing `"+activeName+"`...":"Generating `"+activeName+"`...")+"_";
+  }
+  return d;
+}
+
+/* final display after streaming completes */
+function buildFinalDisplay(raw){
+  let d=raw.replace(/(?:^|\n)\s*delete:\s*\S+\s*(?=\n|$)/g,"");
+  let deletedNames=[];
+  const dRe=/(?:^|\n)\s*delete:\s*([\w][\w.\/-]*)/g; let dm;
+  while((dm=dRe.exec(raw))!==null) deletedNames.push(dm[1].trim());
+  d=d.replace(/```file:(\S+)\s*\n([\s\S]*?)```/g,(m,nm)=>{
+    nm=nm.trim();
+    const st=liveStatus[nm]||{added:0,removed:0,isEdit:false};
+    if(st.isEdit) return "Edited `"+nm+"` **+"+st.added+" -"+st.removed+"**";
+    return "Generated `"+nm+"` to File System";
+  });
+  for(const dn of deletedNames){ d+= "\n\nDeleted `"+dn+"` from File System"; }
+  return d.trim();
+}
+
+/* ===== STREAMING UI ===== */
+let streamCtx = null;
+function createStreamMessage(){
+  const div=document.createElement("div");
+  div.className="gd-msg ai";
+  const s=document.createElement("div");s.className="sender";
+  s.textContent= gdProvider==="hf"?"HuggingFace":"Gemini";
+  div.appendChild(s);
+  const body=document.createElement("div");
+  body.className="gd-stream-body";
+  div.appendChild(body);
+  gdMsgs.appendChild(div);
+  gdMsgs.scrollTop=gdMsgs.scrollHeight;
+  streamCtx={el:div, body};
+  return streamCtx;
+}
+function updateStreamBody(html){
+  if(streamCtx){ streamCtx.body.innerHTML=html||""; gdMsgs.scrollTop=gdMsgs.scrollHeight; }
+}
+
+let thinkEl=null;
+function showThinking(){
+  if(!thinkEl){
+    thinkEl=document.createElement("div");thinkEl.className="gd-thinking";thinkEl.id="gdThink";
+    gdMsgs.appendChild(thinkEl);
+  }
+  thinkEl.innerHTML='<div class="dots"><span></span><span></span><span></span></div> '+(gdProvider==="gemini"?"Gemini":"HuggingFace")+' thinking...';
+  gdMsgs.scrollTop=gdMsgs.scrollHeight;
+}
+function updateThinking(thinkText, hasAnswer){
+  if(!thinkEl) showThinking();
+  if(hasAnswer && thinkText.trim()===""){ removeThinking(); return; }
+  if(thinkText.trim()){
+    const shown=thinkText.trim().slice(0,2200);
+    thinkEl.innerHTML='<div class="dots"><span></span><span></span><span></span></div> <span class="think-label">Thinking...</span><span style="margin-left:6px;color:var(--dim);font-size:11px">'+esc(shown.replace(/\n/g," "))+'</span>';
+  } else {
+    thinkEl.innerHTML='<div class="dots"><span></span><span></span><span></span></div> '+(gdProvider==="gemini"?"Gemini":"HuggingFace")+' thinking...';
+  }
+  gdMsgs.scrollTop=gdMsgs.scrollHeight;
+}
+function removeThinking(){ const th=$("gdThink"); if(th) th.remove(); thinkEl=null; }
 
 /* ===== SEND MESSAGE ===== */
 $("gdSend").addEventListener("click",sendMessage);
@@ -1862,33 +2081,65 @@ async function sendMessage(){
   gdInput.value="";gdInput.style.height="auto";
   gdMessages.push({role:"user",content:text});renderMsgs();
   gdSending=true;$("gdSend").disabled=true;
-  const think=document.createElement("div");think.className="gd-thinking";think.id="gdThink";
-  think.innerHTML='<div class="dots"><span></span><span></span><span></span></div> '+(gdProvider==="gemini"?"Gemini":"HuggingFace")+' thinking...';
-  gdMsgs.appendChild(think);gdMsgs.scrollTop=gdMsgs.scrollHeight;
+
+  /* snapshot original contents for edit diff */
+  gdOrig={}; gdFiles.forEach(f=>{ gdOrig[f.name]=f.content; });
+  liveStatus={};
+
+  createStreamMessage();
+  showThinking();
+
+  let answer="", think="";
   try{
     const fileCtx=gdFiles.map(f=>"\n--- "+f.name+" ---\n"+f.content).join("\n");
     const fullMsg="[Project Files]\n"+fileCtx+"\n\n[User Request]\n"+text;
-    let raw;
-    if(gdProvider==="gemini") raw=await callGemini(fullMsg); else raw=await callHF(fullMsg);
-    const th=$("gdThink");if(th)th.remove();
-    const{display,extracted}=parseResponse(raw);
-    for(const ef of extracted){const ei=gdFiles.findIndex(f=>f.name===ef.name);if(ei>=0)gdFiles[ei].content=ef.content;else gdFiles.push(ef);}
-    gdMessages.push({role:"assistant",content:display,files:extracted.map(f=>f.name),sender:gdProvider});
-    renderMsgs();showFileList();
-    if(extracted.length>0){const idx=gdFiles.findIndex(f=>f.name===extracted[0].name);if(idx>=0)openFileEditor(idx);}
+    const onChunk=(dt,tt)=>{ if(dt) answer+=dt; if(tt) think+=tt; processChunk(answer,think); };
+    if(gdProvider==="gemini") await streamGemini(fullMsg,onChunk);
+    else await streamHF(fullMsg,onChunk);
+    finalizeStream(answer,think);
   }catch(err){
-    const th=$("gdThink");if(th)th.remove();
+    removeThinking();
+    if(streamCtx) streamCtx.el.remove(); streamCtx=null;
     gdMessages.push({role:"assistant",content:"Error: "+err.message,error:true,sender:gdProvider});renderMsgs();
+    renderFileList();
   }
   gdSending=false;$("gdSend").disabled=false;gdInput.focus();
 }
 
-/* ===== GEMINI API ===== */
-async function callGemini(userMsg){
+function processChunk(answer, think){
+  updateThinking(think, answer.trim().length>0);
+  const parsed=parseStream(answer);
+  applyParsed(parsed);
+  updateStreamBody(renderMd(buildStreamDisplay(answer)));
+}
+
+function finalizeStream(answer, think){
+  removeThinking();
+  const parsed=parseStream(answer);
+  applyParsed(parsed);
+  const display=buildFinalDisplay(answer);
+  const fileNames=[];
+  for(const cf of parsed.completed) fileNames.push(cf.name);
+  if(streamCtx){
+    streamCtx.el.remove(); streamCtx=null;
+  }
+  const fileStats={};
+  for(const cf of parsed.completed){
+    fileStats[cf.name]=liveStatus[cf.name]||{added:0,removed:0,isEdit:(gdOrig[cf.name]!==undefined)};
+  }
+  gdMessages.push({role:"assistant",content:display, files:fileNames, fileStats, sender:gdProvider});
+  renderMsgs();
+  renderFileList();
+  if(fileNames.length>0){ const idx=gdFiles.findIndex(f=>f.name===fileNames[0]); if(idx>=0) openFileEditor(idx); }
+  liveStatus={};
+}
+
+/* ===== GEMINI API (streaming + thinking) ===== */
+async function streamGemini(userMsg,onChunk){
   const proxy=gdCorsProxy;let lastErr;
   for(let attempt=0;attempt<3;attempt++){
     const key=nextGK(),model=gdGeminiModel;
-    const base="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+key;
+    const base="https://generativelanguage.googleapis.com/v1beta/models/"+model+":streamGenerateContent?alt=sse&key="+key;
     const url=proxy?proxy+encodeURIComponent(base):base;
     const contents=[];
     for(const m of gdMessages){
@@ -1896,21 +2147,54 @@ async function callGemini(userMsg){
       if(m===gdMessages[gdMessages.length-1]&&m.role==="user") contents.push({role:"user",parts:[{text:userMsg}]});
       else contents.push({role:m.role==="user"?"user":"model",parts:[{text:m.content}]});
     }
-    const body={system_instruction:{parts:[{text:SYS_PROMPT}]},contents,generationConfig:{maxOutputTokens:8192,temperature:0.7}};
+    const genCfg={maxOutputTokens:8192,temperature:0.7};
+    if(/2\.5|3\.[0-9]|^gemini-3/i.test(model)) genCfg.thinkingConfig={includeThoughts:true};
+    const body={system_instruction:{parts:[{text:SYS_PROMPT}]},contents,generationConfig:genCfg};
     try{
       const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
       if(!res.ok){const et=await res.text();lastErr=new Error("Gemini "+res.status+": "+et.slice(0,150));if(res.status===429||res.status===503)continue;throw lastErr;}
-      const data=await res.json();
-      if(data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts) return data.candidates[0].content.parts[0].text;
-      if(data.candidates&&data.candidates[0]&&data.candidates[0].finishReason==="SAFETY") throw new Error("Response blocked by safety filter.");
-      throw new Error("Unexpected Gemini response");
-    }catch(err){lastErr=err;if(attempt<2&&(err.message.includes("429")||err.message.includes("503")))continue;throw err;}
+      await readSSE(res, (chunk)=>{
+        if(!chunk) return;
+        let at="",tt="";
+        const parts=chunk.candidates&&chunk.candidates[0]&&chunk.candidates[0].content&&chunk.candidates[0].content.parts;
+        if(parts){ for(const p of parts){ if(p.text===undefined)continue; if(p.thought){tt+=p.text;} else {at+=p.text;} } }
+        onChunk(at,tt);
+      });
+      return;
+    }catch(err){
+      lastErr=err; if(attempt<2&&(err.message.includes("429")||err.message.includes("503")))continue; throw err;
+    }
   }
   throw lastErr||new Error("All keys exhausted");
 }
 
-/* ===== HUGGINGFACE API ===== */
-async function callHF(userMsg){
+async function readSSE(res, handle){
+  if(!res.body){ const data=await res.json(); handle(data); return; }
+  const reader=res.body.getReader();
+  const dec=new TextDecoder();
+  let buf="";
+  while(true){
+    const {done,value}=await reader.read(); if(done) break;
+    buf+=dec.decode(value,{stream:true});
+    let idx;
+    while((idx=buf.indexOf("\n"))!==-1){
+      let line=buf.slice(0,idx); buf=buf.slice(idx+1);
+      const t=line.trim();
+      if(t.startsWith("data:")){
+        const payload=t.slice(5).trim();
+        if(payload==="[DONE]") continue;
+        try{ handle(JSON.parse(payload)); }catch(e){}
+      }
+    }
+  }
+  if(buf.trim().startsWith("data:")){
+    const payload=buf.trim().slice(5).trim();
+    if(payload!=="[DONE]"){ try{ handle(JSON.parse(payload)); }catch(e){} }
+  }
+}
+
+/* ===== HUGGINGFACE API (streaming, with fallback) ===== */
+async function streamHF(userMsg,onChunk){
   const proxy=gdCorsProxy,model=gdHfModel;
   const base="https://api-inference.huggingface.co/models/"+model+"/v1/chat/completions";
   const url=proxy?proxy+encodeURIComponent(base):base;
@@ -1920,16 +2204,21 @@ async function callHF(userMsg){
     if(m===gdMessages[gdMessages.length-1]&&m.role==="user") msgs.push({role:"user",content:userMsg});
     else msgs.push({role:m.role==="user"?"user":"assistant",content:m.content});
   }
-  const res=await fetch(url,{method:"POST",headers:{"Authorization":"Bearer "+_ht,"Content-Type":"application/json"},body:JSON.stringify({model,messages:msgs,max_tokens:4096,temperature:0.7,stream:false})});
+  const res=await fetch(url,{method:"POST",headers:{"Authorization":"Bearer "+_ht,"Content-Type":"application/json"},body:JSON.stringify({model,messages:msgs,max_tokens:4096,temperature:0.7,stream:true})});
   if(!res.ok){
     const et=await res.text();
-    if(res.status===404||res.status===400) return await callHFFallback(userMsg);
+    if(res.status===404||res.status===400){ const full=await callHFFallback(userMsg); onChunk(full,""); return; }
     throw new Error("HF "+res.status+": "+et.slice(0,150));
   }
-  const data=await res.json();
-  if(data.choices&&data.choices[0]&&data.choices[0].message) return data.choices[0].message.content;
-  if(data.error) throw new Error("HF: "+(data.error.message||JSON.stringify(data.error).slice(0,120)));
-  throw new Error("Unexpected HF response");
+  if(res.body){
+    await readSSE(res,(chunk)=>{
+      const d=chunk.choices&&chunk.choices[0]&&chunk.choices[0].delta;
+      if(d&&d.content){ onChunk(d.content,""); }
+    });
+  } else {
+    const data=await res.json();
+    if(data.choices&&data.choices[0]&&data.choices[0].message) onChunk(data.choices[0].message.content,"");
+  }
 }
 
 async function callHFFallback(userMsg){
@@ -1952,13 +2241,22 @@ document.querySelectorAll("#gdProv button").forEach(btn=>{
   btn.addEventListener("click",()=>{gdProvider=btn.dataset.p;document.querySelectorAll("#gdProv button").forEach(b=>b.classList.toggle("on",b===btn));updateToolbar();});
 });
 
+function modelOptionsHtml(){
+  let html="";
+  for(const m of GD_MODELS){ html+='<option value="'+esc(m)+'">'+esc(m)+'</option>'; }
+  for(const m of gdCustomModels){ html+='<option value="'+esc(m)+'">'+esc(m)+' (custom)</option>'; }
+  html+='<option value="__custom__">Custom model...</option>';
+  return html;
+}
+
 function updateToolbar(){
   const sel=$("gdModelSel"),hfW=$("gdHfSearchWrap"),lbl=$("gdModelLabel");
   if(gdProvider==="gemini"){
     sel.style.display="";hfW.style.display="none";
-    sel.innerHTML='<option value="gemini-2.0-flash">gemini-2.0-flash</option><option value="gemini-2.5-flash-preview-05-20">gemini-2.5-flash-preview</option><option value="gemini-2.5-pro-preview-05-06">gemini-2.5-pro-preview</option><option value="gemini-1.5-flash">gemini-1.5-flash</option><option value="__custom__">Custom model...</option>';
-    sel.value=gdGeminiModel;if(sel.value==="")sel.value="gemini-2.0-flash";
-    lbl.textContent=sel.value==="__custom__"?gdGeminiModel:sel.value;
+    if(isCustomGemini(gdGeminiModel) && !gdCustomModels.includes(gdGeminiModel)){ addCustomModel(gdGeminiModel); }
+    sel.innerHTML=modelOptionsHtml();
+    sel.value=gdGeminiModel;
+    lbl.textContent=gdGeminiModel;
   } else {
     sel.style.display="none";hfW.style.display="flex";
     lbl.textContent="HF: "+gdHfModel.split("/").pop();
@@ -1966,8 +2264,13 @@ function updateToolbar(){
 }
 
 $("gdModelSel").addEventListener("change",(e)=>{
-  if(e.target.value==="__custom__"){const c=$("gdCustomGemini").value.trim()||prompt("Enter Gemini model:","gemini-2.0-flash");if(c){gdGeminiModel=c;$("gdModelLabel").textContent=c;}e.target.value=gdGeminiModel;}
-  else{gdGeminiModel=e.target.value;$("gdModelLabel").textContent=gdGeminiModel;}
+  if(e.target.value==="__custom__"){
+    const c=$("gdCustomGemini").value.trim()||prompt("Enter Gemini model:","gemini-2.0-flash");
+    if(c){ gdGeminiModel=c; addCustomModel(c); saveModel(); updateToolbar(); }
+    e.target.value=gdGeminiModel;
+  } else {
+    gdGeminiModel=e.target.value; saveModel(); $("gdModelLabel").textContent=gdGeminiModel;
+  }
 });
 
 /* ===== HF SEARCH ===== */
@@ -1997,7 +2300,10 @@ async function searchHF(){
 
 /* ===== SETTINGS ===== */
 $("gdCors").addEventListener("change",(e)=>{gdCorsProxy=e.target.value.trim();});
-$("gdCustomGemini").addEventListener("change",(e)=>{const v=e.target.value.trim();if(v){gdGeminiModel=v;updateToolbar();}});
+$("gdCustomGemini").addEventListener("change",(e)=>{
+  const v=e.target.value.trim();
+  if(v){ gdGeminiModel=v; addCustomModel(v); saveModel(); updateToolbar(); }
+});
 $("gdCustomHf").addEventListener("change",(e)=>{const v=e.target.value.trim();if(v){gdHfModel=v;$("gdModelLabel").textContent="HF: "+v.split("/").pop();}});
 $("gdClearChat").addEventListener("click",()=>{gdMessages=[];addWelcome();renderMsgs();});
 
